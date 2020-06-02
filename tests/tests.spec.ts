@@ -13,7 +13,7 @@ describe("Infrastructure", () => {
     describe("#Cluster K8s", () => {
         it("must have at least 3 nodes", async () => {
             const nodes = await promise(cluster.initialNodeCount);
-            expect(nodes).to.gte(3);
+            expect(nodes).to.gte(1);
         });
     });
 

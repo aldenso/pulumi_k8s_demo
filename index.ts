@@ -1,35 +1,38 @@
 import * as k8s from "@pulumi/kubernetes";
 import * as pulumi from "@pulumi/pulumi";
 import * as gcp from "@pulumi/gcp";
+import * as config from "./config/config";
 
 import { runTests } from "./tests";
 
-const name = "gdcdevops";
-const regionName = 'us-central1';
-const domain = 'aldenso.com';
-const initialNodes = 3;
+const project = config.project;
+const regionName = config.region;
+const domain = config.domain;
+const initialNodes = config.nodes;
+const iprange = config.ipcidrrange;
+const zone = config.zone;
 
 const computeNetwork = new gcp.compute.Network('tsk8snet', {
-    project: name,
+    project: project,
     autoCreateSubnetworks: false
 });
 
 export const customNet = computeNetwork;
 
 const computeSubNetwork = new gcp.compute.Subnetwork('tsk8ssubnet', {
-    ipCidrRange: '10.2.1.0/24',
+    ipCidrRange: iprange,
     network: computeNetwork.selfLink,
     region: regionName,
-    project: name
+    project: project
 });
 
 // Create a GKE cluster
 const engineVersion = gcp.container.getEngineVersions().latestMasterVersion;
-const cluster = new gcp.container.Cluster(name, {
+const cluster = new gcp.container.Cluster(project, {
     initialNodeCount: initialNodes,
     minMasterVersion: engineVersion,
     nodeVersion: engineVersion,
-    location: regionName+"-a",
+    location: zone,
     network: computeNetwork.selfLink,
     subnetwork: computeSubNetwork.selfLink,
     nodeConfig: {
@@ -54,8 +57,8 @@ export const clusterName = cluster.name;
 // // authentication (rather than using the client cert/key directly).
 const kubeconfig = pulumi.
     all([ cluster.name, cluster.endpoint, cluster.masterAuth ]).
-    apply(([ name, endpoint, masterAuth ]) => {
-        const context = `${gcp.config.project}_${gcp.config.zone}_${name}`;
+    apply(([ project, endpoint, masterAuth ]) => {
+        const context = `${gcp.config.project}_${gcp.config.zone}_${project}`;
         return `apiVersion: v1
 clusters:
 - cluster:
@@ -86,7 +89,7 @@ users:
 export const KUBECONFIG = pulumi.secret(kubeconfig)
 
 // Create a Kubernetes provider instance that uses our cluster from above.
-const clusterProvider = new k8s.Provider(name, {
+const clusterProvider = new k8s.Provider(project, {
     kubeconfig: kubeconfig,
 });
 
@@ -119,13 +122,13 @@ export const dnsZone = new gcp.dns.ManagedZone('mydns-zone', {
   description: "My dns Zone",
   dnsName: domain+".",
   name: "mydns-zone",
-  project: name,
+  project: project,
 }, {dependsOn: nginx});
 
 export const dnsRecords = new gcp.dns.RecordSet('mydns-records', {
   name: 'myk8s.'+domain+'.',
   managedZone: dnsZone.name,
-  project: name,
+  project: project,
   ttl: 300,
   rrdatas: [ingressIp],
   type: 'A',
