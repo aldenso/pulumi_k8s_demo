@@ -15,11 +15,19 @@ v2.2.1
 
 * Acceso a GCP y cuenta de servicio con privilegios (archivo json con las credenciales)
 * GCP project donde se tengan privilegios para GKE.
-* Python3.
+* NodeJS.
 * Pulumi CLI ([pulumi](https://www.pulumi.com/docs/reference/cli/)).
 
 ```sh
 pulumi new -d "k8s cluster using typescript" --dir pulumi_k8s_demo typescript -y -s develop
+
+Nota: no hace falta realizarlo ya que el repositorio tiene el contenido.
+```
+
+Crear el stack.
+
+```sh
+pulumi stack init develop
 ```
 
 Instalar las dependencias para kubernetes.
