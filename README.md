@@ -34,10 +34,10 @@ Definir los valores de configuracion para GCP.
 ```sh
 pulumi config set gcp:project YOURPROJECT
 pulumi config set gcp:zone YOURZONE
-pulumi config set gcp:region YOURREGION
-pulumi config set pulumi_k8s_demo:domain YOURDOMAIN
-pulumi config set pulumi_k8s_demo:nodes YOURNODESCOUNT
-pulumi config set pulumi_k8s_demo:ipcidrrange YOURIPRANGE
+pulumi config set region YOURREGION
+pulumi config set domain YOURDOMAIN
+pulumi config set nodes YOURNODESCOUNT
+pulumi config set ipcidrrange YOURIPRANGE
 ```
 
 Definir las credencias en variable de ambiente para pulumi.
