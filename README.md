@@ -44,6 +44,7 @@ pulumi config set gcp:project YOURPROJECT
 pulumi config set gcp:zone YOURZONE
 pulumi config set region YOURREGION
 pulumi config set domain YOURDOMAIN
+pulumi config set subdomain YOURSUBDOMAIN
 pulumi config set nodes YOURNODESCOUNT
 pulumi config set ipcidrrange YOURIPRANGE
 ```
@@ -64,4 +65,25 @@ Realizar el despliegue.
 
 ```sh
 pulumi up -y
+```
+
+Obtener las credenciales del cluster.
+
+```sh
+pulumi stack output KUBECONFIG --show-secrets > /tmp/kubeconfig
+```
+
+Obtener el password del usuario admin de grafana.
+
+```sh
+kubectl --kubeconfig=/tmp/kubeconfig get secret \
+    --namespace default grafana \
+    -o jsonpath="{.data.admin-password}" \
+    | base64 --decode ; echo
+```
+
+Abrir un navegador y comprobar que se puede ingresar en grafana.
+
+```console
+http://subdomain.domain/login
 ```

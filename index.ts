@@ -8,6 +8,7 @@ import { runTests } from "./tests";
 const project = config.project;
 const regionName = config.region;
 const domain = config.domain;
+const subdomain = config.subdomain;
 const initialNodes = config.nodes;
 const iprange = config.ipcidrrange;
 const zone = config.zone;
@@ -28,6 +29,7 @@ const computeSubNetwork = new gcp.compute.Subnetwork('tsk8ssubnet', {
 
 // Create a GKE cluster
 const engineVersion = gcp.container.getEngineVersions().latestMasterVersion;
+
 const cluster = new gcp.container.Cluster(project, {
   initialNodeCount: initialNodes,
   minMasterVersion: engineVersion,
@@ -118,6 +120,48 @@ export const ingressIp = nginx.getResourceProperty('v1/Service',
                                                     'status')
                                                 .apply(status => status.loadBalancer.ingress[0].ip)
 
+// Deploy the NGINX ingress controller using the Helm chart.
+
+const fqdn = subdomain+"."+domain;
+
+export const grafana = new k8s.helm.v2.Chart("grafana",
+  {
+    namespace: "default",
+    chart: "grafana",
+    version: "5.0.22",
+    fetchOpts: {repo: "https://kubernetes-charts.storage.googleapis.com/"},
+    values: {ingress: {enabled: true, hosts: {name: fqdn}}, metrics: {enabled: true, }},
+    transformations: [
+        (obj: any) => {
+            // Do transformations on the YAML to set the namespace
+            if (obj.metadata) {
+                obj.metadata.namespace = "default";
+            }
+        },
+    ],
+  },
+  {providers: {kubernetes: clusterProvider}, dependsOn: cluster},
+);
+
+// export const prometheus = new k8s.helm.v2.Chart("prometheus",
+//   {
+//     namespace: "default",
+//     chart: "prometheus",
+//     version: "11.1.6",
+//     fetchOpts: {repo: "https://kubernetes-charts.storage.googleapis.com/"},
+//     values: {ingress: {enabled: true, hosts: {name: fqdn, extraPaths: "/prometheus"}}},
+//     transformations: [
+//         (obj: any) => {
+//             // Do transformations on the YAML to set the namespace
+//             if (obj.metadata) {
+//                 obj.metadata.namespace = "default";
+//             }
+//         },
+//     ],
+//   },
+//   {providers: {kubernetes: clusterProvider}, dependsOn: cluster},
+// );
+
 export const dnsZone = new gcp.dns.ManagedZone('mydns-zone', {
   description: "My dns Zone",
   dnsName: domain+".",
@@ -126,7 +170,7 @@ export const dnsZone = new gcp.dns.ManagedZone('mydns-zone', {
 }, {dependsOn: nginx});
 
 export const dnsRecords = new gcp.dns.RecordSet('mydns-records', {
-  name: 'myk8s.'+domain+'.',
+  name: fqdn+'.',
   managedZone: dnsZone.name,
   project: project,
   ttl: 300,
